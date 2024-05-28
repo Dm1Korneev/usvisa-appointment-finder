@@ -120,6 +120,10 @@ def main():
             check_appointments(driver)
         except Exception as err:
             print(f'Exception: {err}')
+            if 'disconnected' in f'{err}':
+                print('Reconnecting...')
+                driver.quit()
+                driver = webdriver.Chrome(service=service, options=chrome_options)
 
         time.sleep(seconds_between_checks)
 
