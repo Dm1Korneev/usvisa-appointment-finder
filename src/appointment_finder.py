@@ -14,7 +14,11 @@ from urls import BASE_URL, SIGN_IN_URL, SCHEDULE_URL, APPOINTMENTS_URL
 
 
 def log_in(driver):
-    if driver.current_url != SIGN_IN_URL:
+    driver.get(APPOINTMENTS_URL)
+    # Waiting for the page to load.
+    time.sleep(2)
+    if driver.current_url == APPOINTMENTS_URL:
+        print('Logged in.')
         return
 
     print('Logging in.')
@@ -36,9 +40,12 @@ def log_in(driver):
     # Clicking 'Sign in'
     driver.find_element(By.XPATH, '//*[@id="sign_in_form"]/p[1]/input').click()
 
-    # Waiting for the page to load.
     time.sleep(2)
-    print('Logged in.')
+    if driver.current_url == APPOINTMENTS_URL:
+        print('Logged in.')
+        return
+
+    log_in(driver)
 
 
 def is_worth_notifying(year, month, days):
@@ -49,23 +56,28 @@ def is_worth_notifying(year, month, days):
 
 
 def check_appointments(driver):
-    driver.get(SCHEDULE_URL)
     log_in(driver)
-
-    driver.get(APPOINTMENTS_URL)
 
     # Clicking the Continue button in case of rescheduling multiple people to include all
     continue_button = driver.find_element(By.CLASS_NAME, 'primary')
+
+    print('continue_button')
     if continue_button and continue_button.get_property('value') == 'Continue':
+        print('continue_button.click')
         continue_button.click()
 
-    facility_select = Select(driver.find_element(By.ID, 'appointments_consulate_appointment_facility_id'))
-    facility_select.select_by_visible_text(facility_name)
-    time.sleep(1)
+    time.sleep(3)
+
+    # # Selecting the facility
+    # facility_select = Select(driver.find_element(By.ID, 'appointments_consulate_appointment_facility_id'))
+    # facility_select.select_by_visible_text(facility_name)
+    # time.sleep(2)
 
     if driver.find_element(By.ID, 'consulate_date_time_not_available').is_displayed():
         print("No dates available")
         return
+
+    time.sleep(3)
 
     # Click on "Date of Appointment" to display calendar
     driver.find_element(By.ID, 'appointments_consulate_appointment_date').click()
