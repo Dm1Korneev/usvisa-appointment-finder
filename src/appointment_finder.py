@@ -60,10 +60,7 @@ def check_appointments(driver):
 
     # Clicking the Continue button in case of rescheduling multiple people to include all
     continue_button = driver.find_element(By.CLASS_NAME, 'primary')
-
-    print('continue_button')
     if continue_button and continue_button.get_property('value') == 'Continue':
-        print('continue_button.click')
         continue_button.click()
 
     time.sleep(3)
