@@ -54,6 +54,25 @@ def is_worth_notifying(year, month, days):
 
     return first_available_date_object <= latest_notification_date_object
 
+def rebook_day(year, month, days):
+    for day in days:
+        print(day)
+        date = datetime.datetime.strptime(f'{year}-{month}-{day}', "%Y-%B-%d")
+        forbidden = False
+        for forbidden_period in get_forbidden_periods():
+            if date >= forbidden_period[0] and date <= forbidden_period[1]:
+                forbidden = True
+                break
+        if not forbidden:
+            return day
+    return False
+
+def get_forbidden_periods():
+    return [
+        [datetime.datetime.strptime('2024-06-08', '%Y-%m-%d'), datetime.datetime.strptime('2024-06-17', '%Y-%m-%d')],
+        [datetime.datetime.strptime('2024-07-10', '%Y-%m-%d'), datetime.datetime.strptime('2024-08-20', '%Y-%m-%d')],
+        [datetime.datetime.strptime('2024-09-01', '%Y-%m-%d'), datetime.datetime.strptime('2024-09-20', '%Y-%m-%d')]
+    ]
 
 def check_appointments(driver):
     log_in(driver)
@@ -82,20 +101,42 @@ def check_appointments(driver):
     while True:
         for date_picker in driver.find_elements(By.CLASS_NAME, 'ui-datepicker-group'):
             day_elements = date_picker.find_elements(By.TAG_NAME, 'td')
-            available_days = [day_element.find_element(By.TAG_NAME, 'a').get_attribute("textContent")
+            available_days_elements = [day_element.find_element(By.TAG_NAME, 'a')
                               for day_element in day_elements if day_element.get_attribute("class") == ' undefined']
+
+            available_days = list(map(lambda element: element.get_attribute("textContent"), available_days_elements))
+
             if available_days:
                 month = date_picker.find_element(By.CLASS_NAME, 'ui-datepicker-month').get_attribute("textContent")
                 year = date_picker.find_element(By.CLASS_NAME, 'ui-datepicker-year').get_attribute("textContent")
                 message = f'Available days found in {month} {year}: {", ".join(available_days)}. Link: {SIGN_IN_URL}'
                 print(message)
 
-                if not is_worth_notifying(year, month, available_days):
+                if is_worth_notifying(year, month, available_days):
+                    send_message(message)
+                    send_photo(driver.get_screenshot_as_png())
+                else:
                     print("Not worth notifying.")
                     return
 
-                send_message(message)
-                send_photo(driver.get_screenshot_as_png())
+                need_rebook = rebook_day(year, month, available_days)
+                if (need_rebook is False):
+                    return
+
+                print(f'Rebooking {need_rebook}')
+                day = list(filter(lambda element: element.get_attribute("textContent") == need_rebook, available_days_elements))
+                day[0].click()
+
+                time.sleep(2)
+
+                time_select = Select(driver.find_element(By.ID, 'appointments_consulate_appointment_time'))
+                options = time_select.options
+                time_select.select_by_value(time_select.options[1].get_attribute("textContent"))
+
+                driver.find_element(By.ID, 'appointments_submit').click()
+
+                driver.find_element(By.XPATH, "//a[@class='button alert']").click()
+
                 return
 
         # Skipping two months since we processed both already
@@ -105,7 +146,7 @@ def check_appointments(driver):
 
 def main():
     chrome_options = Options()
-    chrome_options.add_argument("--headless")
+    # chrome_options.add_argument("--headless")
 
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
