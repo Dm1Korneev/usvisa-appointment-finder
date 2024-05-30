@@ -113,8 +113,7 @@ def check_appointments(driver):
                 print(message)
 
                 if is_worth_notifying(year, month, available_days):
-                    send_message(message)
-                    send_photo(driver.get_screenshot_as_png())
+                    # Will rebook
                 else:
                     print("Not worth notifying.")
                     return
@@ -136,6 +135,9 @@ def check_appointments(driver):
                 driver.find_element(By.ID, 'appointments_submit').click()
 
                 driver.find_element(By.XPATH, "//a[@class='button alert']").click()
+
+                send_message(message)
+                send_photo(driver.get_screenshot_as_png())
 
                 return
 
