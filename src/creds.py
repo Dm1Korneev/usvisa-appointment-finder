@@ -24,3 +24,4 @@ seconds_between_checks = int(configs.get('seconds_between_checks').data)
 # Telegram bot token and chat
 telegram_bot_token = configs.get('telegram_bot_token').data
 telegram_chat_id = configs.get('telegram_chat_id').data
+telegram_debug_chat_id = configs.get('telegram_debug_chat_id').data

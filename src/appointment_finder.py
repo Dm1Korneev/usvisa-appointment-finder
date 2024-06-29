@@ -9,17 +9,19 @@ from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
 from creds import username, password, facility_name, latest_notification_date, seconds_between_checks
-from telegram import send_message, send_photo
+from telegram import send_message, send_photo, send_debug_message, send_debug_photo
 from urls import BASE_URL, SIGN_IN_URL, SCHEDULE_URL, APPOINTMENTS_URL
 
 
-def log_in(driver):
-    driver.get(APPOINTMENTS_URL)
-    # Waiting for the page to load.
-    time.sleep(2)
+def log_in(driver, attempts):    
     if driver.current_url == APPOINTMENTS_URL:
         print('Logged in.')
         return
+    
+    if (attempts == 0):
+        send_debug_message('Cant login')
+        send_debug_photo(driver.get_screenshot_as_png())
+        raise Exception('Cant login')
 
     print('Logging in.')
 
@@ -41,11 +43,9 @@ def log_in(driver):
     driver.find_element(By.XPATH, '//*[@id="sign_in_form"]/p[1]/input').click()
 
     time.sleep(2)
-    if driver.current_url == APPOINTMENTS_URL:
-        print('Logged in.')
-        return
+    attempts = attempts - 1
 
-    log_in(driver)
+    log_in(driver, attempts)
 
 
 def is_worth_notifying(year, month, days):
@@ -69,13 +69,17 @@ def rebook_day(year, month, days):
 
 def get_forbidden_periods():
     return [
-        [datetime.datetime.strptime('2024-06-08', '%Y-%m-%d'), datetime.datetime.strptime('2024-06-17', '%Y-%m-%d')],
-        [datetime.datetime.strptime('2024-07-10', '%Y-%m-%d'), datetime.datetime.strptime('2024-08-20', '%Y-%m-%d')],
+        [datetime.datetime.strptime('2024-06-20', '%Y-%m-%d'), datetime.datetime.strptime('2024-07-30', '%Y-%m-%d')],
         [datetime.datetime.strptime('2024-09-01', '%Y-%m-%d'), datetime.datetime.strptime('2024-09-20', '%Y-%m-%d')]
     ]
 
 def check_appointments(driver):
-    log_in(driver)
+    driver.get(APPOINTMENTS_URL)
+    # Waiting for the page to load.
+    time.sleep(2)
+    
+    attempts = 3
+    log_in(driver, attempts)
 
     # Clicking the Continue button in case of rescheduling multiple people to include all
     continue_button = driver.find_element(By.CLASS_NAME, 'primary')
@@ -112,9 +116,7 @@ def check_appointments(driver):
                 message = f'Available days found in {month} {year}: {", ".join(available_days)}. Link: {SIGN_IN_URL}'
                 print(message)
 
-                if is_worth_notifying(year, month, available_days):
-                    # Will rebook
-                else:
+                if not is_worth_notifying(year, month, available_days):
                     print("Not worth notifying.")
                     return
 
